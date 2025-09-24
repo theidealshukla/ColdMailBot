@@ -1,6 +1,3 @@
-Of course\! Here is a comprehensive `README.md` file for your GitHub repository, explaining how to set up and use your Python email automation script.
-
------
 
 # Bulk Email Sender for Personalized Job Applications
 
