@@ -17,54 +17,140 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import time
+import re
 
-def generate_personalized_email(hr_name, company):
+def load_email_config(config_file_path="email_config.md"):
     """
-    Generate a personalized email using the custom template.
+    Load email configuration from markdown file.
+    
+    Args:
+        config_file_path: Path to the email configuration markdown file
+        
+    Returns:
+        Dictionary containing email configuration
+    """
+    try:
+        with open(config_file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        
+        config = {}
+        
+        # Extract subject template
+        subject_match = re.search(r'## Email Subject Template\s*```\s*\n(.*?)\n```', content, re.DOTALL)
+        if subject_match:
+            config['subject_template'] = subject_match.group(1).strip()
+        else:
+            config['subject_template'] = "Internship Application - {company}"
+        
+        # Extract body template
+        body_match = re.search(r'## Email Body Template\s*```\s*\n(.*?)\n```', content, re.DOTALL)
+        if body_match:
+            config['body_template'] = body_match.group(1).strip()
+        else:
+            config['body_template'] = "Dear {hr_name},\n\nI am interested in internship opportunities at {company}.\n\nBest regards,\nAdarsh Kumar Shukla"
+        
+        # Extract sender email
+        sender_email_match = re.search(r'- \*\*Sender Email\*\*: (.+)', content)
+        if sender_email_match:
+            config['sender_email'] = sender_email_match.group(1).strip()
+        else:
+            config['sender_email'] = "adarshshuklawork@gmail.com"
+        
+        # Extract sender name
+        sender_name_match = re.search(r'- \*\*Sender Name\*\*: (.+)', content)
+        if sender_name_match:
+            config['sender_name'] = sender_name_match.group(1).strip()
+        else:
+            config['sender_name'] = "Adarsh Kumar Shukla"
+        
+        # Extract resume path
+        resume_path_match = re.search(r'- \*\*Resume Path\*\*: (.+)', content)
+        if resume_path_match:
+            config['resume_path'] = resume_path_match.group(1).strip()
+        else:
+            config['resume_path'] = r"c:\Users\Adarsh\OneDrive\Documents\Resume\adarsh resume\Resume.pdf"
+        
+        # Extract delay
+        delay_match = re.search(r'- \*\*Delay Between Emails\*\*: (\d+)', content)
+        if delay_match:
+            config['email_delay'] = int(delay_match.group(1))
+        else:
+            config['email_delay'] = 3
+        
+        print(f"✅ Successfully loaded email configuration from {config_file_path}")
+        return config
+        
+    except FileNotFoundError:
+        print(f"❌ Configuration file {config_file_path} not found. Using default settings.")
+        return {
+            'subject_template': "Internship Application - {company}",
+            'body_template': "Dear {hr_name},\n\nI am interested in internship opportunities at {company}.\n\nBest regards,\nAdarsh Kumar Shukla",
+            'sender_email': "adarshshuklawork@gmail.com",
+            'sender_name': "Adarsh Kumar Shukla",
+            'resume_path': r"c:\Users\Adarsh\OneDrive\Documents\Resume\adarsh resume\Resume.pdf",
+            'email_delay': 3
+        }
+    except Exception as e:
+        print(f"❌ Error loading email configuration: {str(e)}")
+        return None
+
+def generate_personalized_email(hr_name, company, config):
+    """
+    Generate a personalized email using the template from configuration.
     
     Args:
         hr_name: Name of the HR contact
         company: Company name
+        config: Configuration dictionary loaded from email_config.md
         
     Returns:
-        Personalized email content
+        Tuple of (subject, body) for the personalized email
     """
     try:
-        # Clean input data to remove problematic characters
-        hr_name = str(hr_name).replace('\xa0', ' ').replace('\u00a0', ' ').strip()
-        company = str(company).replace('\xa0', ' ').replace('\u00a0', ' ').strip()
+        # Clean and normalize input data
+        hr_name = str(hr_name).strip()
+        company = str(company).strip()
         
-        # Custom email template
-        email_template = f"""Dear {hr_name},
-
-I am writing to express my interest in the internship opportunity at {company}. As a pre-final year B.Tech Computer Science student at Technocrats Institute of Technology, Bhopal, I have developed a strong foundation in web development and problem-solving, complemented by hands-on experience building real-world projects.
-
-In my academic and project work, I have:
-
-    - Built an AI-powered customer support portal with real-time complaint tracking, Google Authentication, and automated RCA/CAPA suggestions, reducing analysis time by 70%.
-
-    - Developed a responsive news website using JavaScript and Bootstrap, simulating a headless CMS with dynamic content loading.
-
-    - Gained practical experience with JavaScript, React.js, Firebase, Supabase, and Python, alongside deployment tools such as Netlify and Vercel.
-
-I am eager to apply these skills to contribute to {company}, learn from industry professionals, and further sharpen my technical expertise. My strengths in collaboration, adaptability, and problem-solving make me confident in my ability to add value as an intern.
-
-I would welcome the opportunity to discuss how my skills and projects align with your team's needs. Thank you for considering my application.
-
-Sincerely,
-Adarsh Kumar Shukla"""
+        # Remove all types of problematic Unicode characters
+        unicode_chars_to_remove = ['\xa0', '\u00a0', '\u2009', '\u2002', '\u2003', '\u2004', '\u2005', '\u2006', '\u2007', '\u2008', '\u200a', '\u200b', '\u2060', '\ufeff']
+        for char in unicode_chars_to_remove:
+            hr_name = hr_name.replace(char, ' ')
+            company = company.replace(char, ' ')
         
-        # Clean the final email content and ensure ASCII compatibility
-        email_content = email_template.strip()
-        # Remove any remaining problematic characters
-        email_content = email_content.replace('\xa0', ' ').replace('\u00a0', ' ')
+        # Normalize whitespace
+        hr_name = ' '.join(hr_name.split())
+        company = ' '.join(company.split())
+        
+        # Convert to ASCII-safe strings
+        hr_name = hr_name.encode('ascii', 'ignore').decode('ascii')
+        company = company.encode('ascii', 'ignore').decode('ascii')
+        
+        # Create template variables dictionary
+        template_vars = {
+            'hr_name': hr_name,
+            'company': company,
+            'sender_name': config.get('sender_name', 'Adarsh Kumar Shukla'),
+            'sender_email': config.get('sender_email', 'adarshshuklawork@gmail.com')
+        }
+        
+        # Generate subject from template
+        subject = config.get('subject_template', 'Internship Application - {company}')
+        subject = subject.format(**template_vars)
+        
+        # Generate body from template
+        body = config.get('body_template', 'Dear {hr_name},\n\nI am interested in internship opportunities at {company}.\n\nBest regards,\n{sender_name}')
+        body = body.format(**template_vars)
+        
+        # Final cleanup - ensure only ASCII characters
+        subject = subject.encode('ascii', 'ignore').decode('ascii')
+        body = body.encode('ascii', 'ignore').decode('ascii')
         
         print(f"Generated personalized email for {hr_name} at {company}")
-        return email_content
+        return subject, body
         
     except Exception as e:
         print(f"Error generating email for {hr_name} at {company}: {str(e)}")
-        return None
+        return None, None
 
 def send_email_via_gmail(sender_email, sender_password, recipient_email, subject, body, attachment_path=None):
     """
@@ -167,10 +253,17 @@ def read_hr_contacts(csv_file_path):
 def main():
     """Main function to send personalized emails to all HR contacts."""
     
-    # Configuration
-    sender_email = "adarshshuklawork@gmail.com"
+    # Load email configuration from markdown file
+    config = load_email_config("email_config.md")
+    if not config:
+        print("❌ Failed to load email configuration. Exiting.")
+        return False
+    
+    # Configuration from config file
+    sender_email = config.get('sender_email', 'adarshshuklawork@gmail.com')
     csv_file_path = "hr_contacts.csv"
-    resume_path = r"c:\Users\Adarsh\OneDrive\Documents\Resume\adarsh resume\Resume.pdf"
+    resume_path = config.get('resume_path', r"c:\Users\Adarsh\OneDrive\Documents\Resume\adarsh resume\Resume.pdf")
+    email_delay = config.get('email_delay', 3)
     
     # Get Gmail password from environment
     gmail_password = os.getenv('GMAIL_APP_PASSWORD')
@@ -226,14 +319,11 @@ def main():
             print(f"   Email: {hr_email}")
             
             # Generate personalized email content
-            email_body = generate_personalized_email(hr_name, company)
-            if not email_body:
+            subject, email_body = generate_personalized_email(hr_name, company, config)
+            if not email_body or not subject:
                 print(f"   ❌ Failed to generate email content")
                 failed_sends += 1
                 continue
-            
-            # Prepare subject
-            subject = f"Frontend Internship Application – {company}"
             
             # Send email
             print(f"   📤 Sending email...")
@@ -255,8 +345,8 @@ def main():
             
             # Add delay between emails to avoid rate limiting
             if i < len(contacts):  # Don't wait after the last email
-                print(f"   ⏳ Waiting 3 seconds before next email...")
-                time.sleep(3)
+                print(f"   ⏳ Waiting {email_delay} seconds before next email...")
+                time.sleep(email_delay)
                 
         except Exception as e:
             print(f"   ❌ Error processing {contact.get('name', 'Unknown')}: {str(e)}")
