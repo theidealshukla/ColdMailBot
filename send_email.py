@@ -3,7 +3,10 @@
 Advanced Email Sender Script
 
 This script reads HR contacts from CSV file, generates personalized emails using Gemini API,
-and sends them individually via Gmail SMTP.
+and sends them individually via Gmail SM    print(f"\nStarting email campaign to {len(contacts)} HR contacts")
+    print(f"From: {sender_email}")
+    print(f"Resume: {resume_path}")
+    print("=" * 60)
 """
 
 import smtplib
@@ -56,11 +59,11 @@ Adarsh Kumar Shukla"""
         # Remove any remaining problematic characters
         email_content = email_content.replace('\xa0', ' ').replace('\u00a0', ' ')
         
-        print(f"✅ Generated personalized email for {hr_name} at {company}")
+        print(f"Generated personalized email for {hr_name} at {company}")
         return email_content
         
     except Exception as e:
-        print(f"❌ Error generating email for {hr_name} at {company}: {str(e)}")
+        print(f"Error generating email for {hr_name} at {company}: {str(e)}")
         return None
 
 def send_email_via_gmail(sender_email, sender_password, recipient_email, subject, body, attachment_path=None):
@@ -183,6 +186,17 @@ def main():
         print("5. Set it as environment variable: $env:GMAIL_APP_PASSWORD='your-app-password'")
         print("\nOr enter it now (will not be saved):")
         gmail_password = input("Gmail App Password: ").strip()
+        
+        # Clean the password of any problematic Unicode characters
+        unicode_chars_to_remove = ['\xa0', '\u00a0', '\u2009', '\u2002', '\u2003', '\u2004', '\u2005', '\u2006', '\u2007', '\u2008', '\u200a', '\u200b', '\u2060', '\ufeff']
+        for char in unicode_chars_to_remove:
+            gmail_password = gmail_password.replace(char, '')
+        
+        # Ensure only ASCII characters and remove any remaining spaces
+        gmail_password = gmail_password.encode('ascii', 'ignore').decode('ascii')
+        gmail_password = ''.join(gmail_password.split())
+        
+        print(f"Cleaned password length: {len(gmail_password)}")
         
         if not gmail_password:
             print("❌ No password provided. Exiting.")
