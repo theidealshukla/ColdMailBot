@@ -4,27 +4,26 @@ Keep only what you need. Edit subject, body, and basic settings below.
 
 ## Email Subject Template
 ```
-Internship Application - {company}
+Exploring Internship Opportunities at {company}
 ```
 
 ## Email Body Template
 ```
 Dear {hr_name},
 
-I am writing to express my interest in the internship opportunity at {company}. As a pre-final year B.Tech Computer Science student, I have built a strong foundation in web development and problem-solving through hands-on projects.
+I hope you’re doing well. My name is Adarsh Kumar Shukla, and I’m currently a pre-final year B.Tech Computer Science student. I came across {company}’s work and would love the chance to explore internship opportunities with your team.
 
-Key highlights:
+A little about me:
 
-- AI-powered customer support portal (tracking, auth, RCA/CAPA suggestions)
+-Built an AI-driven customer support portal (with tracking, authentication, and RCA/CAPA suggestions)
 
-- Responsive news website (dynamic content loading)
+-Developed a responsive news website with dynamic content loading
 
-- Experience with JavaScript, React, Firebase, Supabase, Python
+-Hands-on experience with JavaScript, React, Firebase, Supabase, and Python
 
+I’m excited about the possibility of contributing to {company}, while also learning and growing under the guidance of your team. Please let me know if we could connect further about potential opportunities.
 
-I am eager to contribute to {company}, learn from your team, and grow further. I would welcome the opportunity to discuss how my skills align with your needs.
-
-Sincerely,
+Looking forward to your response,
 Adarsh Kumar Shukla
 ```
 
