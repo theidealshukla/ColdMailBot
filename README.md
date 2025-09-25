@@ -34,6 +34,7 @@ Clone this repository or download the `send_email.py` and create the other neces
 ```bash
 git clone <your-repository-url>
 cd <your-repository-directory>
+cd "automation script"  # Navigate to the main script folder
 ```
 
 ### 2\. Install Dependencies
@@ -159,9 +160,11 @@ The script uses a markdown configuration file for easy customization without edi
 ### File Structure
 ```
 internship-automation/
-├── send_email.py          # Main script
-├── email_config.md        # Email templates and settings
-├── hr_contacts.csv        # Contact information
+├── automation script/     # Main folder containing all scripts
+│   ├── send_email.py      # Main email sender script
+│   ├── preview_email.py   # Preview emails without sending
+│   ├── email_config.md    # Email templates and settings
+│   └── hr_contacts.csv    # Contact information
 └── README.md             # Documentation
 ```
 
@@ -169,10 +172,19 @@ internship-automation/
 
 ### Running the Script
 
-Once everything is set up, run the script from your terminal:
+Once everything is set up, navigate to the automation script folder and run:
 
 ```bash
+cd "automation script"
 python send_email.py
+```
+
+### Preview Emails (Recommended)
+
+Before sending, you can preview how your emails will look:
+
+```bash
+python preview_email.py
 ```
 
 ### What Happens:

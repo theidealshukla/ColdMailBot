@@ -19,80 +19,109 @@ from email import encoders
 import time
 import re
 
-def load_email_config(config_file_path="email_config.md"):
+def load_email_config(primary_md="email_config.md", fallback_txt="email_config.txt"):
+    """Load email configuration preferring markdown, with TXT fallback.
+
+    Markdown format expectations:
+      ## Email Subject Template  (code block with subject)
+      ## Email Body Template     (code block with body)
+      Configuration Settings list style lines for sender, resume, delay.
+
+    Fallback TXT format supports:
+      - KEY=VALUE or KEY: VALUE
+      - [BODY] ... [/BODY]
     """
-    Load email configuration from markdown file.
-    
-    Args:
-        config_file_path: Path to the email configuration markdown file
-        
-    Returns:
-        Dictionary containing email configuration
-    """
-    try:
-        with open(config_file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-        
-        config = {}
-        
-        # Extract subject template
-        subject_match = re.search(r'## Email Subject Template\s*```\s*\n(.*?)\n```', content, re.DOTALL)
-        if subject_match:
-            config['subject_template'] = subject_match.group(1).strip()
-        else:
-            config['subject_template'] = "Internship Application - {company}"
-        
-        # Extract body template
-        body_match = re.search(r'## Email Body Template\s*```\s*\n(.*?)\n```', content, re.DOTALL)
-        if body_match:
-            config['body_template'] = body_match.group(1).strip()
-        else:
-            config['body_template'] = "Dear {hr_name},\n\nI am interested in internship opportunities at {company}.\n\nBest regards,\nAdarsh Kumar Shukla"
-        
-        # Extract sender email
-        sender_email_match = re.search(r'- \*\*Sender Email\*\*: (.+)', content)
-        if sender_email_match:
-            config['sender_email'] = sender_email_match.group(1).strip()
-        else:
-            config['sender_email'] = "adarshshuklawork@gmail.com"
-        
-        # Extract sender name
-        sender_name_match = re.search(r'- \*\*Sender Name\*\*: (.+)', content)
-        if sender_name_match:
-            config['sender_name'] = sender_name_match.group(1).strip()
-        else:
-            config['sender_name'] = "Adarsh Kumar Shukla"
-        
-        # Extract resume path
-        resume_path_match = re.search(r'- \*\*Resume Path\*\*: (.+)', content)
-        if resume_path_match:
-            config['resume_path'] = resume_path_match.group(1).strip()
-        else:
-            config['resume_path'] = r"c:\Users\Adarsh\OneDrive\Documents\Resume\adarsh resume\Resume.pdf"
-        
-        # Extract delay
-        delay_match = re.search(r'- \*\*Delay Between Emails\*\*: (\d+)', content)
-        if delay_match:
-            config['email_delay'] = int(delay_match.group(1))
-        else:
-            config['email_delay'] = 3
-        
-        print(f"✅ Successfully loaded email configuration from {config_file_path}")
-        return config
-        
-    except FileNotFoundError:
-        print(f"❌ Configuration file {config_file_path} not found. Using default settings.")
-        return {
-            'subject_template': "Internship Application - {company}",
-            'body_template': "Dear {hr_name},\n\nI am interested in internship opportunities at {company}.\n\nBest regards,\nAdarsh Kumar Shukla",
-            'sender_email': "adarshshuklawork@gmail.com",
-            'sender_name': "Adarsh Kumar Shukla",
-            'resume_path': r"c:\Users\Adarsh\OneDrive\Documents\Resume\adarsh resume\Resume.pdf",
-            'email_delay': 3
-        }
-    except Exception as e:
-        print(f"❌ Error loading email configuration: {str(e)}")
-        return None
+
+    def _apply_defaults(cfg: dict):
+        cfg.setdefault('subject_template', "Internship Application - {company}")
+        cfg.setdefault('body_template', "Dear {hr_name},\n\nI am interested in internship opportunities at {company}.\n\nBest regards,\nAdarsh Kumar Shukla")
+        cfg.setdefault('sender_email', "adarshshuklawork@gmail.com")
+        cfg.setdefault('sender_name', "Adarsh Kumar Shukla")
+        cfg.setdefault('resume_path', r"c:\Users\Adarsh\OneDrive\Documents\Resume\adarsh resume\Resume.pdf")
+        cfg.setdefault('email_delay', 3)
+        return cfg
+
+    # First try markdown
+    if os.path.exists(primary_md):
+        try:
+            with open(primary_md, 'r', encoding='utf-8') as f:
+                content = f.read()
+            cfg: dict[str, str | int] = {}
+            # Subject code block
+            subj_match = re.search(r'##\s*Email Subject Template.*?```(.*?)```', content, re.DOTALL | re.IGNORECASE)
+            if subj_match:
+                cfg['subject_template'] = subj_match.group(1).strip().splitlines()[0].strip()
+            # Body code block
+            body_match = re.search(r'##\s*Email Body Template.*?```(.*?)```', content, re.DOTALL | re.IGNORECASE)
+            if body_match:
+                body_block = body_match.group(1).strip()
+                cfg['body_template'] = body_block
+            # Sender email
+            sender_email = re.search(r'Sender Email\*?\*?\s*:\s*([^\n]+)', content, re.IGNORECASE)
+            if sender_email:
+                cfg['sender_email'] = sender_email.group(1).strip()
+            sender_name = re.search(r'Sender Name\*?\*?\s*:\s*([^\n]+)', content, re.IGNORECASE)
+            if sender_name:
+                cfg['sender_name'] = sender_name.group(1).strip()
+            resume_path = re.search(r'Resume Path\*?\*?\s*:\s*([^\n]+)', content, re.IGNORECASE)
+            if resume_path:
+                cfg['resume_path'] = resume_path.group(1).strip()
+            delay = re.search(r'Delay Between Emails\*?\*?\s*:\s*(\d+)', content, re.IGNORECASE)
+            if delay:
+                cfg['email_delay'] = int(delay.group(1))
+
+            _apply_defaults(cfg)
+            print(f"✅ Loaded markdown configuration from {primary_md}")
+            return cfg
+        except Exception as e:
+            print(f"⚠️ Failed to parse markdown config ({e}). Trying TXT fallback...")
+
+    # Fallback to TXT
+    if os.path.exists(fallback_txt):
+        try:
+            with open(fallback_txt, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            cfg: dict[str, str | int] = {}
+            in_body = False
+            body_lines: list[str] = []
+            for raw in lines:
+                line = raw.rstrip('\n')
+                stripped = line.strip()
+                if not stripped or stripped.startswith('#'):
+                    continue
+                if stripped.upper() == '[BODY]':
+                    in_body = True
+                    body_lines = []
+                    continue
+                if stripped.upper() == '[/BODY]':
+                    in_body = False
+                    cfg['body_template'] = '\n'.join(body_lines).strip()
+                    continue
+                if in_body:
+                    body_lines.append(line)
+                    continue
+                if '=' in stripped:
+                    k, v = stripped.split('=', 1)
+                elif ':' in stripped:
+                    k, v = stripped.split(':', 1)
+                else:
+                    continue
+                k = k.strip().upper(); v = v.strip()
+                if k == 'SUBJECT': cfg['subject_template'] = v
+                elif k == 'SENDER_EMAIL': cfg['sender_email'] = v
+                elif k == 'SENDER_NAME': cfg['sender_name'] = v
+                elif k == 'RESUME_PATH': cfg['resume_path'] = v
+                elif k == 'EMAIL_DELAY':
+                    try: cfg['email_delay'] = int(v)
+                    except ValueError: print('⚠️ EMAIL_DELAY invalid, using default.')
+            _apply_defaults(cfg)
+            print(f"✅ Loaded text configuration from {fallback_txt}")
+            return cfg
+        except Exception as e:
+            print(f"❌ Error parsing text config: {e}")
+
+    print("❌ No configuration file found. Using defaults.")
+    return _apply_defaults({})
 
 def generate_personalized_email(hr_name, company, config):
     """
@@ -253,8 +282,8 @@ def read_hr_contacts(csv_file_path):
 def main():
     """Main function to send personalized emails to all HR contacts."""
     
-    # Load email configuration from markdown file
-    config = load_email_config("email_config.md")
+    # Load email configuration (markdown preferred, txt fallback)
+    config = load_email_config()
     if not config:
         print("❌ Failed to load email configuration. Exiting.")
         return False
